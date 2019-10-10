@@ -38,7 +38,8 @@ class MongoDbTest extends Unit
 
         $mongo = new \MongoDB\Client();
 
-        $this->module = new MongoDb(make_container());
+        $container = \Codeception\Util\Stub::make('Codeception\Lib\ModuleContainer');
+        $this->module = new MongoDb($container);
         $this->module->_setConfig($this->mongoConfig);
         try {
             $this->module->_initialize();

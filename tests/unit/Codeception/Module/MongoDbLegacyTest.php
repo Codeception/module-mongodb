@@ -37,7 +37,8 @@ class MongoDbLegacyTest extends \Codeception\PHPUnit\TestCase
 
         $mongo = new \MongoClient();
 
-        $this->module = new MongoDb(make_container());
+        $container = \Codeception\Util\Stub::make('Codeception\Lib\ModuleContainer');
+        $this->module = new MongoDb($container);
         $this->module->_setConfig($this->mongoConfig);
         $this->module->_initialize();
 
