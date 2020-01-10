@@ -235,6 +235,17 @@ class MongoDb
         $this->dbh = $this->client->{$this->legacy ? 'selectDB' : 'selectDatabase'}($dbName);
     }
 
+    public function getDbHash()
+    {
+        $result = $this->dbh->command(['dbHash' => 1]);
+
+        if (!is_array($result)) {
+            $result = iterator_to_array($result);
+        }
+
+        return isset($result[0]->md5) ? $result[0]->md5 : null;
+    }
+
     /**
      * Determine if this driver is using the legacy extension or not.
      *

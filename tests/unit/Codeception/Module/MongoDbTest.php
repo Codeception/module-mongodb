@@ -36,11 +36,14 @@ class MongoDbTest extends Unit
             $this->markTestSkipped('MongoDB is not installed');
         }
 
+        $cleanupDirty = in_array('cleanup-dirty', $this->getGroups());
+        $config = $this->mongoConfig + ['cleanup' => $cleanupDirty ? 'dirty' : true];
+
         $mongo = new \MongoDB\Client();
 
         $container = \Codeception\Util\Stub::make('Codeception\Lib\ModuleContainer');
         $this->module = new MongoDb($container);
-        $this->module->_setConfig($this->mongoConfig);
+        $this->module->_setConfig($config);
         try {
             $this->module->_initialize();
         } catch (ModuleException $e) {
@@ -49,7 +52,10 @@ class MongoDbTest extends Unit
 
         $this->db = $mongo->selectDatabase('test');
         $this->userCollection = $this->db->users;
-        $this->userCollection->insertOne(array('id' => 1, 'email' => 'miles@davis.com'));
+
+        if (!$cleanupDirty) {
+            $this->userCollection->insertOne(array('id' => 1, 'email' => 'miles@davis.com'));
+        }
     }
 
     protected function _tearDown()
@@ -167,5 +173,44 @@ class MongoDbTest extends Unit
         foreach ($testRecords as $testRecord) {
             $this->module->haveInCollection('96_bulls', $testRecord);
         }
+    }
+
+    /**
+     * @group cleanup-dirty
+     */
+    public function testCleanupDirty()
+    {
+        $test = $this->createMock('Codeception\TestInterface');
+        $collection = $this->db->selectCollection('96_bulls');
+
+        $hash1 = $this->module->driver->getDbHash();
+        $this->module->seeNumElementsInCollection('96_bulls', 7);
+        $this->assertEquals($hash1, $this->module->driver->getDbHash());
+
+        $this->module->_after($test);
+
+        $this->module->_before($test); // No cleanup expected
+
+        $this->assertEquals($hash1, $this->module->driver->getDbHash());
+        $collection->insertOne(array('name' => 'Coby White','position' => 'pg'));
+
+        $hashDirty = $this->module->driver->getDbHash();
+        $this->assertNotEquals($hash1, $hashDirty);
+
+        $this->module->_after($test);
+
+        $this->module->_before($test); // Cleanup expected
+        $this->module->seeNumElementsInCollection('96_bulls', 7);
+
+        $hash2 = $this->module->driver->getDbHash();
+
+        $this->assertNotEquals($hash1, $hash2);
+        $this->assertNotEquals($hashDirty, $hash2);
+
+        $this->module->_after($test);
+
+        $this->module->_before($test); // No cleanup expected
+
+        $this->assertEquals($hash2, $this->module->driver->getDbHash());
     }
 }
