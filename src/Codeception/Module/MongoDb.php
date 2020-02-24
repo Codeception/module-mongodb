@@ -47,7 +47,9 @@ use Codeception\TestInterface;
  *   default: MongoDb::DUMP_TYPE_JS).
  * * dump - path to database dump
  * * populate: true - should the dump be loaded before test suite is started.
- * * cleanup: true - should the dump be reloaded after each test
+ * * cleanup: true - should the dump be reloaded after each test.
+ *   Boolean or 'dirty'. If cleanup is set to 'dirty', the dump is only reloaded if any data has been written to the db during a test. This is
+ *   checked using the [dbHash](https://docs.mongodb.com/manual/reference/command/dbHash/) command.
  *
  */
 class MongoDb extends CodeceptionModule implements RequiresPackage
