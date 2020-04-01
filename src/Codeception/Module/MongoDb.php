@@ -47,7 +47,9 @@ use Codeception\TestInterface;
  *   default: MongoDb::DUMP_TYPE_JS).
  * * dump - path to database dump
  * * populate: true - should the dump be loaded before test suite is started.
- * * cleanup: true - should the dump be reloaded after each test
+ * * cleanup: true - should the dump be reloaded after each test.
+ *   Boolean or 'dirty'. If cleanup is set to 'dirty', the dump is only reloaded if any data has been written to the db during a test. This is
+ *   checked using the [dbHash](https://docs.mongodb.com/manual/reference/command/dbHash/) command.
  *
  */
 class MongoDb extends CodeceptionModule implements RequiresPackage
@@ -68,6 +70,8 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
 
     protected $dumpFile;
     protected $isDumpFileEmpty = true;
+
+    protected $dbHash;
 
     protected $config = [
         'populate'  => true,
@@ -180,7 +184,7 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
 
     public function _before(TestInterface $test)
     {
-        if ($this->config['cleanup'] && !$this->populated) {
+        if ($this->shouldCleanup()) {
             $this->cleanup();
             $this->loadDump();
         }
@@ -189,6 +193,17 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
     public function _after(TestInterface $test)
     {
         $this->populated = false;
+    }
+
+    protected function shouldCleanup()
+    {
+        if ($this->populated) {
+            return false;
+        }
+
+        return $this->config['cleanup'] === 'dirty'
+            ? ($this->dbHash === null || $this->driver->getDbHash() !== $this->dbHash)
+            : (bool)$this->config['cleanup'];
     }
 
     protected function cleanup()
@@ -229,6 +244,10 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
             }
         } catch (\Exception $e) {
             throw new ModuleException(__CLASS__, $e->getMessage());
+        }
+
+        if ($this->config['cleanup'] === 'dirty') {
+            $this->dbHash = $this->driver->getDbHash();
         }
     }
 
