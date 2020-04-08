@@ -33,7 +33,8 @@ class MongoDbTest extends Unit
     protected function _setUp()
     {
         if (!class_exists('\MongoDB\Client')) {
-            $this->markTestSkipped('MongoDB is not installed');
+            //$this->markTestSkipped('MongoDB is not installed');
+            var_dump('No MongoDB Client');
         }
 
         $cleanupDirty = in_array('cleanup-dirty', $this->getGroups());
@@ -47,7 +48,8 @@ class MongoDbTest extends Unit
         try {
             $this->module->_initialize();
         } catch (ModuleException $e) {
-            $this->markTestSkipped($e->getMessage());
+            //$this->markTestSkipped($e->getMessage());
+            var_dump($e);
         }
 
         $this->db = $mongo->selectDatabase('test');
