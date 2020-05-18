@@ -1,6 +1,6 @@
 # MongoDB module for Codeception
 
-[![Build Status](https://travis-ci.org/Codeception/module-mongodb.svg?branch=master)](https://travis-ci.org/Codeception/module-mongodb)
+![Build Status](https://github.com/Codeception/module-mongodb/workflows/CI/badge.svg)
 
 ## Installation
 
