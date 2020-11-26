@@ -26,6 +26,8 @@ jobs:
         extensions: mbstring, xml, dom, mongodb
         tools: pecl
         coverage: none
+      env:
+        fail-fast: true
 
     - name: Validate composer.json and composer.lock
       run: composer validate
