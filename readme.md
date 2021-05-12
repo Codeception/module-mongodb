@@ -13,6 +13,10 @@ A MongoDB module for Codeception.
 composer require "codeception/module-mongodb" --dev
 ```
 
+## Requirements
+
+* `PHP 7.1` or higher.
+
 ## Documentation
 
 See [the module documentation](https://codeception.com/docs/modules/MongoDb).
