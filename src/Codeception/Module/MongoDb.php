@@ -96,10 +96,11 @@ class MongoDb extends Module implements RequiresPackage
     protected $config = [
         'populate'  => true,
         'cleanup'   => true,
+        'dsn'       => '',
         'dump'      => null,
         'dump_type' => self::DUMP_TYPE_JS,
-        'user'      => null,
-        'password'  => null,
+        'user'      => '',
+        'password'  => '',
         'quiet'     => false,
     ];
 
@@ -120,7 +121,6 @@ class MongoDb extends Module implements RequiresPackage
 
     public function _initialize()
     {
-
         try {
             $this->driver = MongoDbDriver::create(
                 $this->config['dsn'],
@@ -280,14 +280,14 @@ class MongoDb extends Module implements RequiresPackage
     /**
      * Specify the database to use
      *
-     * ``` php
+     * ```php
      * <?php
      * $I->useDatabase('db_1');
      * ```
      *
-     * @param $dbName
+     * @param string $dbName
      */
-    public function useDatabase($dbName): void
+    public function useDatabase(string $dbName): void
     {
         $this->driver->setDatabase($dbName);
     }
@@ -295,22 +295,19 @@ class MongoDb extends Module implements RequiresPackage
     /**
      * Inserts data into collection
      *
-     * ``` php
+     * ```php
      * <?php
      * $I->haveInCollection('users', ['name' => 'John', 'email' => 'john@coltrane.com']);
      * $user_id = $I->haveInCollection('users', ['email' => 'john@coltrane.com']);
      * ```
      *
-     * @param $collection
-     * @return mixed|string
+     * @param string $collection
+     * @param array $data
+     * @return string
      */
-    public function haveInCollection($collection, array $data)
+    public function haveInCollection(string $collection, array $data): string
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
-        if ($this->driver->isLegacy()) {
-            $collection->insert($data);
-            return $data['_id'];
-        }
 
         $response = $collection->insertOne($data);
         return (string) $response->getInsertedId();
@@ -319,14 +316,14 @@ class MongoDb extends Module implements RequiresPackage
     /**
      * Checks if collection contains an item.
      *
-     * ``` php
+     * ```php
      * <?php
      * $I->seeInCollection('users', ['name' => 'miles']);
      * ```
      *
-     * @param $collection
+     * @param string $collection
      */
-    public function seeInCollection($collection, array $criteria = []): void
+    public function seeInCollection(string $collection, array $criteria = []): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         $res = $collection->count($criteria);
@@ -336,14 +333,14 @@ class MongoDb extends Module implements RequiresPackage
     /**
      * Checks if collection doesn't contain an item.
      *
-     * ``` php
+     * ```php
      * <?php
      * $I->dontSeeInCollection('users', ['name' => 'miles']);
      * ```
      *
-     * @param $collection
+     * @param string $collection
      */
-    public function dontSeeInCollection($collection, array $criteria = []): void
+    public function dontSeeInCollection(string $collection, array $criteria = []): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         $res = $collection->count($criteria);
@@ -353,15 +350,15 @@ class MongoDb extends Module implements RequiresPackage
     /**
      * Grabs a data from collection
      *
-     * ``` php
+     * ```php
      * <?php
      * $user = $I->grabFromCollection('users', ['name' => 'miles']);
      * ```
      *
-     * @param $collection
+     * @param string $collection
      * @return \MongoDB\Model\BSONDocument|mixed
      */
-    public function grabFromCollection($collection, array $criteria = [])
+    public function grabFromCollection(string $collection, array $criteria = [])
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         return $collection->findOne($criteria);
@@ -370,16 +367,16 @@ class MongoDb extends Module implements RequiresPackage
     /**
      * Grabs the documents count from a collection
      *
-     * ``` php
+     * ```php
      * <?php
      * $count = $I->grabCollectionCount('users');
      * // or
      * $count = $I->grabCollectionCount('users', ['isAdmin' => true]);
      * ```
      *
-     * @param $collection
+     * @param string $collection
      */
-    public function grabCollectionCount($collection, array $criteria = []): int
+    public function grabCollectionCount(string $collection, array $criteria = []): int
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         return $collection->count($criteria);
@@ -388,7 +385,7 @@ class MongoDb extends Module implements RequiresPackage
     /**
      * Asserts that an element in a collection exists and is an Array
      *
-     * ``` php
+     * ```php
      * <?php
      * $I->seeElementIsArray('users', ['name' => 'John Doe'], 'data.skills');
      * ```
@@ -417,7 +414,7 @@ class MongoDb extends Module implements RequiresPackage
     /**
      * Asserts that an element in a collection exists and is an Object
      *
-     * ``` php
+     * ```php
      * <?php
      * $I->seeElementIsObject('users', ['name' => 'John Doe'], 'data');
      * ```
@@ -446,15 +443,15 @@ class MongoDb extends Module implements RequiresPackage
     /**
      * Count number of records in a collection
      *
-     * ``` php
+     * ```php
      * <?php
      * $I->seeNumElementsInCollection('users', 2);
      * $I->seeNumElementsInCollection('users', 1, ['name' => 'miles']);
      * ```
      *
-     * @param $collection
+     * @param string $collection
      */
-    public function seeNumElementsInCollection($collection, int $expected, array $criteria = []): void
+    public function seeNumElementsInCollection(string $collection, int $expected, array $criteria = []): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         $res = $collection->count($criteria);

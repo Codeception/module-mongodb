@@ -7,10 +7,7 @@ namespace Codeception\Lib\Driver;
 use Codeception\Exception\ModuleConfigException;
 use Codeception\Exception\ModuleException;
 use Exception;
-use MongoClient;
-use MongoConnectionException;
 use MongoDB\Database;
-use MongoException;
 
 class MongoDb
 {
@@ -18,10 +15,6 @@ class MongoDb
      * @var int
      */
     const DEFAULT_PORT = 27017;
-    /**
-     * @var bool
-     */
-    private $isLegacy;
     /**
      * @var \Codeception\Lib\Driver\MongoDB|null
      */
@@ -34,7 +27,7 @@ class MongoDb
     private $user;
     private $password;
     /**
-     * @var \MongoDB\Client|MongoClient|null
+     * @var \MongoDB\Client|null
      */
     private $client;
     /**
@@ -42,34 +35,16 @@ class MongoDb
      */
     private $quiet = '';
 
-    public static function connect($dsn, $user, $password): void
-    {
-        throw new Exception(__CLASS__ . '::connect() - hm, it looked like this method had become obsolete...');
-    }
-
     /**
      * Connect to the Mongo server using the MongoDB extension.
      */
-    protected function setupMongoDB($dsn, $options): void
+    protected function setupMongoDB(string $dsn, array $options): void
     {
         try {
             $this->client = new \MongoDB\Client($dsn, $options);
             $this->dbh    = $this->client->selectDatabase($this->dbName);
         } catch (\MongoDB\Driver\Exception $exception) {
             throw new ModuleException($this, sprintf('Failed to open Mongo connection: %s', $exception->getMessage()));
-        }
-    }
-
-    /**
-     * Connect to the Mongo server using the legacy mongo extension.
-     */
-    protected function setupMongo($dsn, $options): void
-    {
-        try {
-            $this->client = new MongoClient($dsn, $options);
-            $this->dbh    = $this->client->selectDB($this->dbName);
-        } catch (MongoConnectionException $e) {
-            throw new ModuleException($this, sprintf('Failed to open Mongo connection: %s', $e->getMessage()));
         }
     }
 
@@ -86,42 +61,15 @@ class MongoDb
     }
 
     /**
-     * Clean up the Mongo database using the legacy Mongo extension.
-     */
-    protected function cleanupMongo(): void
-    {
-        try {
-            $list = $this->dbh->listCollections();
-        } catch (MongoException $e) {
-            throw new Exception(sprintf('Failed to list collections of the DB: %s', $e->getMessage()), $e->getCode(), $e);
-        }
-        foreach ($list as $collection) {
-            try {
-                $collection->drop();
-            } catch (MongoException $e) {
-                throw new Exception(sprintf('Failed to drop collection: %s', $e->getMessage()), $e->getCode(), $e);
-            }
-        }
-    }
-
-    /**
      * $dsn has to contain db_name after the host. E.g. "mongodb://localhost:27017/mongo_test_db"
      *
      * @static
      *
-     * @param $dsn
-     * @param $user
-     * @param $password
-     *
      * @throws ModuleConfigException
      * @throws Exception
      */
-    public function __construct($dsn, $user, $password)
+    public function __construct(string $dsn, string $user, string $password)
     {
-        $this->isLegacy = !extension_loaded('mongodb') &&
-            class_exists('\\MongoClient') &&
-            strpos(MongoClient::VERSION, 'mongofill') === false;
-
         /* defining DB name */
         $this->dbName = preg_replace('#\?.*#', '', substr($dsn, strrpos($dsn, '/') + 1));
 
@@ -148,35 +96,31 @@ class MongoDb
             ];
         }
 
-        $this->{$this->isLegacy ? 'setupMongo' : 'setupMongoDB'}($dsn, $options);
+        $this->setupMongoDB($dsn, $options);
         $this->user = $user;
         $this->password = $password;
     }
 
     /**
      * @static
-     *
-     * @param $dsn
-     * @param $user
-     * @param $password
      */
-    public static function create($dsn, $user, $password): \Codeception\Lib\Driver\MongoDb
+    public static function create(string $dsn, string $user, string $password): \Codeception\Lib\Driver\MongoDb
     {
         return new MongoDb($dsn, $user, $password);
     }
 
     public function cleanup(): void
     {
-        $this->{$this->isLegacy ? 'cleanupMongo' : 'cleanupMongoDB'}();
+        $this->cleanupMongoDB();
     }
 
     /**
      * dump file has to be a javascript document where one can use all the mongo shell's commands
      * just FYI: this file can be easily created be RockMongo's export button
      *
-     * @param $dumpFile
+     * @param string $dumpFile
      */
-    public function load($dumpFile): void
+    public function load(string $dumpFile): void
     {
         $cmd = sprintf(
             'mongo %s %s%s',
@@ -187,7 +131,7 @@ class MongoDb
         shell_exec($cmd);
     }
 
-    public function loadFromMongoDump($dumpFile): void
+    public function loadFromMongoDump(string $dumpFile): void
     {
         [$host, $port] = $this->getHostPort();
         $cmd = sprintf(
@@ -202,7 +146,7 @@ class MongoDb
         shell_exec($cmd);
     }
 
-    public function loadFromTarGzMongoDump($dumpFile): void
+    public function loadFromTarGzMongoDump(string $dumpFile): void
     {
         [$host, $port] = $this->getHostPort();
         $getDirCmd = sprintf(
@@ -251,9 +195,9 @@ class MongoDb
         return $this->dbh;
     }
 
-    public function setDatabase($dbName): void
+    public function setDatabase(string $dbName): void
     {
-        $this->dbh = $this->client->{$this->isLegacy ? 'selectDB' : 'selectDatabase'}($dbName);
+        $this->dbh = $this->client->selectDatabase($dbName);
     }
 
     public function getDbHash()
@@ -265,14 +209,6 @@ class MongoDb
         }
 
         return $result[0]->md5 ?? null;
-    }
-
-    /**
-     * Determine if this driver is using the legacy extension or not.
-     */
-    public function isLegacy(): bool
-    {
-        return $this->isLegacy;
     }
 
     /**
@@ -290,7 +226,7 @@ class MongoDb
         throw new ModuleException($this, '$dsn MUST be like (mongodb://)<host>:<port>/<db name>');
     }
 
-    public function setQuiet($quiet): void
+    public function setQuiet(bool $quiet): void
     {
         $this->quiet = $quiet ? '--quiet' : '';
     }
