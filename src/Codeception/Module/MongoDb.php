@@ -1,13 +1,18 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Codeception\Module;
 
 use Codeception\Lib\Interfaces\RequiresPackage;
-use Codeception\Module as CodeceptionModule;
+use Codeception\Module;
 use Codeception\Configuration;
 use Codeception\Exception\ModuleConfigException;
 use Codeception\Exception\ModuleException;
 use Codeception\Lib\Driver\MongoDb as MongoDbDriver;
 use Codeception\TestInterface;
+use Exception;
+use MongoConnectionException;
 
 /**
  * Works with MongoDb database.
@@ -52,10 +57,19 @@ use Codeception\TestInterface;
  *   checked using the [dbHash](https://docs.mongodb.com/manual/reference/command/dbHash/) command.
  *
  */
-class MongoDb extends CodeceptionModule implements RequiresPackage
+class MongoDb extends Module implements RequiresPackage
 {
+    /**
+     * @var string
+     */
     const DUMP_TYPE_JS = 'js';
+    /**
+     * @var string
+     */
     const DUMP_TYPE_MONGODUMP = 'mongodump';
+    /**
+     * @var string
+     */
     const DUMP_TYPE_MONGODUMP_TAR_GZ = 'mongodump-tar-gz';
 
     /**
@@ -67,22 +81,32 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
     /**
      * @var
      */
-
     protected $dumpFile;
+
+    /**
+     * @var bool
+     */
     protected $isDumpFileEmpty = true;
 
     protected $dbHash;
 
+    /**
+     * @var array
+     */
     protected $config = [
         'populate'  => true,
         'cleanup'   => true,
+        'dsn'       => '',
         'dump'      => null,
         'dump_type' => self::DUMP_TYPE_JS,
-        'user'      => null,
-        'password'  => null,
+        'user'      => '',
+        'password'  => '',
         'quiet'     => false,
     ];
 
+    /**
+     * @var bool
+     */
     protected $populated = false;
 
     /**
@@ -90,18 +114,20 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
      */
     public $driver;
 
+    /**
+     * @var string[]
+     */
     protected $requiredFields = ['dsn'];
 
     public function _initialize()
     {
-
         try {
             $this->driver = MongoDbDriver::create(
                 $this->config['dsn'],
                 $this->config['user'],
                 $this->config['password']
             );
-        } catch (\MongoConnectionException $e) {
+        } catch (MongoConnectionException $e) {
             throw new ModuleException(__CLASS__, $e->getMessage() . ' while creating Mongo connection');
         }
 
@@ -113,9 +139,9 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
         }
     }
 
-    private function validateDump()
+    private function validateDump(): void
     {
-        if ($this->config['dump'] && ($this->config['cleanup'] or ($this->config['populate']))) {
+        if ($this->config['dump'] && ($this->config['cleanup'] || $this->config['populate'])) {
             if (!file_exists(Configuration::projectDir() . $this->config['dump'])) {
                 throw new ModuleConfigException(
                     __CLASS__,
@@ -128,8 +154,8 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
 
             if ($this->config['dump_type'] === self::DUMP_TYPE_JS) {
                 $content = file_get_contents($this->dumpFile);
-                $content = trim(preg_replace('%/\*(?:(?!\*/).)*\*/%s', "", $content));
-                if (!sizeof(explode("\n", $content))) {
+                $content = trim(preg_replace('#/\*(?:(?!\*/).)*\*/#s', "", $content));
+                if (count(explode("\n", $content)) === 0) {
                     $this->isDumpFileEmpty = true;
                 }
                 return;
@@ -162,7 +188,7 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
                         "Tar gunzip archives are not supported for Windows systems"
                     );
                 }
-                if (!preg_match('/(\.tar\.gz|\.tgz)$/', $this->dumpFile)) {
+                if (!preg_match('#(\.tar\.gz|\.tgz)$#', $this->dumpFile)) {
                     throw new ModuleConfigException(
                         __CLASS__,
                         "Dump file must be a valid tar gunzip archive.\n
@@ -195,7 +221,7 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
         $this->populated = false;
     }
 
-    protected function shouldCleanup()
+    protected function shouldCleanup(): bool
     {
         if ($this->populated) {
             return false;
@@ -206,7 +232,7 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
             : (bool)$this->config['cleanup'];
     }
 
-    protected function cleanup()
+    protected function cleanup(): void
     {
         $dbh = $this->driver->getDbh();
         if (!$dbh) {
@@ -217,12 +243,12 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
         }
         try {
             $this->driver->cleanup();
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw new ModuleException(__CLASS__, $e->getMessage());
         }
     }
 
-    protected function loadDump()
+    protected function loadDump(): void
     {
         $this->validateDump();
 
@@ -242,7 +268,7 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
                 $this->driver->setQuiet($this->config['quiet']);
                 $this->driver->loadFromTarGzMongoDump($this->dumpFile);
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             throw new ModuleException(__CLASS__, $e->getMessage());
         }
 
@@ -254,14 +280,14 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
     /**
      * Specify the database to use
      *
-     * ``` php
+     * ```php
      * <?php
      * $I->useDatabase('db_1');
      * ```
      *
-     * @param $dbName
+     * @param string $dbName
      */
-    public function useDatabase($dbName)
+    public function useDatabase(string $dbName): void
     {
         $this->driver->setDatabase($dbName);
     }
@@ -269,22 +295,19 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
     /**
      * Inserts data into collection
      *
-     * ``` php
+     * ```php
      * <?php
-     * $I->haveInCollection('users', array('name' => 'John', 'email' => 'john@coltrane.com'));
-     * $user_id = $I->haveInCollection('users', array('email' => 'john@coltrane.com'));
+     * $I->haveInCollection('users', ['name' => 'John', 'email' => 'john@coltrane.com']);
+     * $user_id = $I->haveInCollection('users', ['email' => 'john@coltrane.com']);
      * ```
      *
-     * @param $collection
+     * @param string $collection
      * @param array $data
+     * @return string
      */
-    public function haveInCollection($collection, array $data)
+    public function haveInCollection(string $collection, array $data): string
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
-        if ($this->driver->isLegacy()) {
-            $collection->insert($data);
-            return $data['_id'];
-        }
 
         $response = $collection->insertOne($data);
         return (string) $response->getInsertedId();
@@ -293,15 +316,14 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
     /**
      * Checks if collection contains an item.
      *
-     * ``` php
+     * ```php
      * <?php
-     * $I->seeInCollection('users', array('name' => 'miles'));
+     * $I->seeInCollection('users', ['name' => 'miles']);
      * ```
      *
-     * @param $collection
-     * @param array $criteria
+     * @param string $collection
      */
-    public function seeInCollection($collection, $criteria = [])
+    public function seeInCollection(string $collection, array $criteria = []): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         $res = $collection->count($criteria);
@@ -311,15 +333,14 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
     /**
      * Checks if collection doesn't contain an item.
      *
-     * ``` php
+     * ```php
      * <?php
-     * $I->dontSeeInCollection('users', array('name' => 'miles'));
+     * $I->dontSeeInCollection('users', ['name' => 'miles']);
      * ```
      *
-     * @param $collection
-     * @param array $criteria
+     * @param string $collection
      */
-    public function dontSeeInCollection($collection, $criteria = [])
+    public function dontSeeInCollection(string $collection, array $criteria = []): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         $res = $collection->count($criteria);
@@ -329,16 +350,15 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
     /**
      * Grabs a data from collection
      *
-     * ``` php
+     * ```php
      * <?php
-     * $user = $I->grabFromCollection('users', array('name' => 'miles'));
+     * $user = $I->grabFromCollection('users', ['name' => 'miles']);
      * ```
      *
-     * @param $collection
-     * @param array $criteria
-     * @return array
+     * @param string $collection
+     * @return \MongoDB\Model\BSONDocument|mixed
      */
-    public function grabFromCollection($collection, $criteria = [])
+    public function grabFromCollection(string $collection, array $criteria = [])
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         return $collection->findOne($criteria);
@@ -347,18 +367,16 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
     /**
      * Grabs the documents count from a collection
      *
-     * ``` php
+     * ```php
      * <?php
      * $count = $I->grabCollectionCount('users');
      * // or
-     * $count = $I->grabCollectionCount('users', array('isAdmin' => true));
+     * $count = $I->grabCollectionCount('users', ['isAdmin' => true]);
      * ```
      *
-     * @param $collection
-     * @param array $criteria
-     * @return integer
+     * @param string $collection
      */
-    public function grabCollectionCount($collection, $criteria = [])
+    public function grabCollectionCount(string $collection, array $criteria = []): int
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         return $collection->count($criteria);
@@ -367,16 +385,12 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
     /**
      * Asserts that an element in a collection exists and is an Array
      *
-     * ``` php
+     * ```php
      * <?php
-     * $I->seeElementIsArray('users', array('name' => 'John Doe') , 'data.skills');
+     * $I->seeElementIsArray('users', ['name' => 'John Doe'], 'data.skills');
      * ```
-     *
-     * @param String $collection
-     * @param Array $criteria
-     * @param String $elementToCheck
      */
-    public function seeElementIsArray($collection, $criteria = [], $elementToCheck = null)
+    public function seeElementIsArray(string $collection, array $criteria = [], string $elementToCheck = null): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
 
@@ -385,7 +399,7 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
                 $criteria,
                 [
                     $elementToCheck => ['$exists' => true],
-                    '$where' => "Array.isArray(this.{$elementToCheck})"
+                    '$where' => sprintf('Array.isArray(this.%s)', $elementToCheck)
                 ]
             )
         );
@@ -400,16 +414,12 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
     /**
      * Asserts that an element in a collection exists and is an Object
      *
-     * ``` php
+     * ```php
      * <?php
-     * $I->seeElementIsObject('users', array('name' => 'John Doe') , 'data');
+     * $I->seeElementIsObject('users', ['name' => 'John Doe'], 'data');
      * ```
-     *
-     * @param String $collection
-     * @param Array $criteria
-     * @param String $elementToCheck
      */
-    public function seeElementIsObject($collection, $criteria = [], $elementToCheck = null)
+    public function seeElementIsObject(string $collection, array $criteria = [], string $elementToCheck = null): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
 
@@ -418,7 +428,7 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
                 $criteria,
                 [
                     $elementToCheck => ['$exists' => true],
-                    '$where' => "! Array.isArray(this.{$elementToCheck}) && isObject(this.{$elementToCheck})"
+                    '$where' => sprintf('! Array.isArray(this.%s) && isObject(this.%s)', $elementToCheck, $elementToCheck)
                 ]
             )
         );
@@ -433,17 +443,15 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
     /**
      * Count number of records in a collection
      *
-     * ``` php
+     * ```php
      * <?php
      * $I->seeNumElementsInCollection('users', 2);
-     * $I->seeNumElementsInCollection('users', 1, array('name' => 'miles'));
+     * $I->seeNumElementsInCollection('users', 1, ['name' => 'miles']);
      * ```
      *
-     * @param $collection
-     * @param integer $expected
-     * @param array $criteria
+     * @param string $collection
      */
-    public function seeNumElementsInCollection($collection, $expected, $criteria = [])
+    public function seeNumElementsInCollection(string $collection, int $expected, array $criteria = []): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         $res = $collection->count($criteria);
@@ -452,6 +460,8 @@ class MongoDb extends CodeceptionModule implements RequiresPackage
 
     /**
      * Returns list of classes and corresponding packages required for this module
+     *
+     * @return array<string, string>
      */
     public function _requires()
     {
