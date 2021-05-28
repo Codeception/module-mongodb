@@ -22,5 +22,8 @@
 	},
 	"config": {
 		"classmap-authoritative": true
+	},
+	"require-dev": {
+		"codeception/stub": "^3.7"
 	}
 }

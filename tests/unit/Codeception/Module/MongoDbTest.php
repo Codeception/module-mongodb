@@ -6,7 +6,7 @@ use Codeception\Lib\ModuleContainer;
 use Codeception\Module\MongoDb;
 use Codeception\Exception\ModuleException;
 use Codeception\Test\Unit;
-use Codeception\Util\Stub;
+use Codeception\Stub;
 use PHPUnit\Framework\ExpectationFailedException;
 
 final class MongoDbTest extends Unit
