@@ -57,7 +57,7 @@ use MongoConnectionException;
  *   checked using the [dbHash](https://docs.mongodb.com/manual/reference/command/dbHash/) command.
  *
  */
-class MongoDb extends Module implements RequiresPackage
+class MongoDb extends Module
 {
     /**
      * @var string
@@ -398,8 +398,7 @@ class MongoDb extends Module implements RequiresPackage
                 'Error: you should test against a single element criteria when asserting that elementIsArray'
             );
         }
-
-        \PHPUnit\Framework\Assert::assertEquals(1, $res, 'Specified element is not a Mongo Object');
+        \PHPUnit\Framework\Assert::assertSame(1, $res, 'Specified element is not a Mongo Object');
     }
 
     /**
@@ -428,8 +427,7 @@ class MongoDb extends Module implements RequiresPackage
                 'Error: you should test against a single element criteria when asserting that elementIsObject'
             );
         }
-
-        \PHPUnit\Framework\Assert::assertEquals(1, $res, 'Specified element is not a Mongo Object');
+        \PHPUnit\Framework\Assert::assertSame(1, $res, 'Specified element is not a Mongo Object');
     }
 
     /**

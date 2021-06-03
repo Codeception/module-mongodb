@@ -6,7 +6,7 @@ use Codeception\Lib\ModuleContainer;
 use Codeception\Module\MongoDb;
 use Codeception\Exception\ModuleException;
 use Codeception\Test\Unit;
-use Codeception\Util\Stub;
+use Codeception\Stub;
 use PHPUnit\Framework\ExpectationFailedException;
 
 final class MongoDbTest extends Unit
@@ -90,7 +90,7 @@ final class MongoDbTest extends Unit
     {
         $user = $this->module->grabFromCollection('users', ['id' => 1]);
         $this->assertArrayHasKey('email', $user);
-        $this->assertEquals('miles@davis.com', $user['email']);
+        $this->assertSame('miles@davis.com', $user['email']);
     }
 
     public function testSeeNumElementsInCollection()
@@ -105,8 +105,8 @@ final class MongoDbTest extends Unit
         $this->userCollection->insertOne(['id' => 2, 'email' => 'louis@armstrong.com']);
         $this->userCollection->insertOne(['id' => 3, 'email' => 'dizzy@gillespie.com']);
 
-        $this->assertEquals(1, $this->module->grabCollectionCount('users', ['id' => 3]));
-        $this->assertEquals(3, $this->module->grabCollectionCount('users'));
+        $this->assertSame(1, $this->module->grabCollectionCount('users', ['id' => 3]));
+        $this->assertSame(3, $this->module->grabCollectionCount('users'));
     }
 
     public function testSeeElementIsArray()
@@ -191,17 +191,17 @@ final class MongoDbTest extends Unit
 
         $hash1 = $this->module->driver->getDbHash();
         $this->module->seeNumElementsInCollection('96_bulls', 7);
-        $this->assertEquals($hash1, $this->module->driver->getDbHash());
+        $this->assertSame($hash1, $this->module->driver->getDbHash());
 
         $this->module->_after($test);
 
         $this->module->_before($test); // No cleanup expected
 
-        $this->assertEquals($hash1, $this->module->driver->getDbHash());
+        $this->assertSame($hash1, $this->module->driver->getDbHash());
         $collection->insertOne(['name' => 'Coby White','position' => 'pg']);
 
         $hashDirty = $this->module->driver->getDbHash();
-        $this->assertNotEquals($hash1, $hashDirty);
+        $this->assertNotSame($hash1, $hashDirty);
 
         $this->module->_after($test);
 
@@ -210,13 +210,13 @@ final class MongoDbTest extends Unit
 
         $hash2 = $this->module->driver->getDbHash();
 
-        $this->assertNotEquals($hash1, $hash2);
-        $this->assertNotEquals($hashDirty, $hash2);
+        $this->assertNotSame($hash1, $hash2);
+        $this->assertNotSame($hashDirty, $hash2);
 
         $this->module->_after($test);
 
         $this->module->_before($test); // No cleanup expected
 
-        $this->assertEquals($hash2, $this->module->driver->getDbHash());
+        $this->assertSame($hash2, $this->module->driver->getDbHash());
     }
 }
