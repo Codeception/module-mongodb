@@ -21,6 +21,8 @@ composer require "codeception/module-mongodb" --dev
 
 See [the module documentation](https://codeception.com/docs/modules/MongoDb).
 
+[Changelog](https://github.com/Codeception/module-mongodb/releases)
+
 ## License
 
 `Codeception Module MongoDB` is open-sourced software licensed under the [MIT](/LICENSE) License.
