@@ -62,17 +62,17 @@ class MongoDb extends Module implements RequiresPackage
     /**
      * @var string
      */
-    const DUMP_TYPE_JS = 'js';
+    public const DUMP_TYPE_JS = 'js';
 
     /**
      * @var string
      */
-    const DUMP_TYPE_MONGODUMP = 'mongodump';
+    public const DUMP_TYPE_MONGODUMP = 'mongodump';
 
     /**
      * @var string
      */
-    const DUMP_TYPE_MONGODUMP_TAR_GZ = 'mongodump-tar-gz';
+    public const DUMP_TYPE_MONGODUMP_TAR_GZ = 'mongodump-tar-gz';
 
     /**
      * @api

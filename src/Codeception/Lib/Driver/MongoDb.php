@@ -14,16 +14,16 @@ class MongoDb
     /**
      * @var int
      */
-    const DEFAULT_PORT = 27017;
+    public const DEFAULT_PORT = 27017;
 
     private ?Database $dbh;
 
-    private ?string $dbName;
+    private ?string $dbName = null;
     private string $host;
     private string $user;
     private string $password;
 
-    private ?\MongoDB\Client $client;
+    private ?\MongoDB\Client $client = null;
 
     private string $quiet = '';
 
