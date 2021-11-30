@@ -62,15 +62,17 @@ class MongoDb extends Module implements RequiresPackage
     /**
      * @var string
      */
-    const DUMP_TYPE_JS = 'js';
+    public const DUMP_TYPE_JS = 'js';
+
     /**
      * @var string
      */
-    const DUMP_TYPE_MONGODUMP = 'mongodump';
+    public const DUMP_TYPE_MONGODUMP = 'mongodump';
+
     /**
      * @var string
      */
-    const DUMP_TYPE_MONGODUMP_TAR_GZ = 'mongodump-tar-gz';
+    public const DUMP_TYPE_MONGODUMP_TAR_GZ = 'mongodump-tar-gz';
 
     /**
      * @api
@@ -78,16 +80,13 @@ class MongoDb extends Module implements RequiresPackage
      */
     public $dbh;
 
-    /**
-     * @var
-     */
-    protected $dumpFile;
+    protected ?string $dumpFile = null;
+
+    protected bool $isDumpFileEmpty = true;
 
     /**
-     * @var bool
+     * @var mixed|null
      */
-    protected $isDumpFileEmpty = true;
-
     protected $dbHash;
 
     /**
@@ -104,15 +103,9 @@ class MongoDb extends Module implements RequiresPackage
         'quiet'     => false,
     ];
 
-    /**
-     * @var bool
-     */
-    protected $populated = false;
+    protected bool $populated = false;
 
-    /**
-     * @var \Codeception\Lib\Driver\MongoDb
-     */
-    public $driver;
+    public ?MongoDbDriver $driver = null;
 
     /**
      * @var string[]
@@ -127,11 +120,12 @@ class MongoDb extends Module implements RequiresPackage
                 $this->config['user'],
                 $this->config['password']
             );
-        } catch (MongoConnectionException $e) {
-            throw new ModuleException(__CLASS__, $e->getMessage() . ' while creating Mongo connection');
+        } catch (MongoConnectionException $exception) {
+            throw new ModuleException(__CLASS__,
+                $exception->getMessage() . ' while creating Mongo connection'
+            );
         }
 
-        // starting with loading dump
         if ($this->config['populate']) {
             $this->cleanup();
             $this->loadDump();
@@ -149,6 +143,7 @@ class MongoDb extends Module implements RequiresPackage
                     Please, check path for dump file: " . $this->config['dump']
                 );
             }
+
             $this->dumpFile = Configuration::projectDir() . $this->config['dump'];
             $this->isDumpFileEmpty = false;
 
@@ -158,6 +153,7 @@ class MongoDb extends Module implements RequiresPackage
                 if (count(explode("\n", $content)) === 0) {
                     $this->isDumpFileEmpty = true;
                 }
+
                 return;
             }
 
@@ -169,6 +165,7 @@ class MongoDb extends Module implements RequiresPackage
                         Please, check dump: " . $this->config['dump']
                     );
                 }
+
                 $this->isDumpFileEmpty = true;
                 $dumpDir = dir($this->dumpFile);
                 while (false !== ($entry = $dumpDir->read())) {
@@ -177,6 +174,7 @@ class MongoDb extends Module implements RequiresPackage
                         break;
                     }
                 }
+
                 $dumpDir->close();
                 return;
             }
@@ -188,6 +186,7 @@ class MongoDb extends Module implements RequiresPackage
                         "Tar gunzip archives are not supported for Windows systems"
                     );
                 }
+
                 if (!preg_match('#(\.tar\.gz|\.tgz)$#', $this->dumpFile)) {
                     throw new ModuleConfigException(
                         __CLASS__,
@@ -195,6 +194,7 @@ class MongoDb extends Module implements RequiresPackage
                         Please, check dump file: " . $this->config['dump']
                     );
                 }
+
                 return;
             }
 
@@ -235,16 +235,17 @@ class MongoDb extends Module implements RequiresPackage
     protected function cleanup(): void
     {
         $dbh = $this->driver->getDbh();
-        if (!$dbh) {
+        if ($dbh === null) {
             throw new ModuleConfigException(
                 __CLASS__,
                 "No connection to database. Remove this module from config if you don't need database repopulation"
             );
         }
+
         try {
             $this->driver->cleanup();
-        } catch (Exception $e) {
-            throw new ModuleException(__CLASS__, $e->getMessage());
+        } catch (Exception $exception) {
+            throw new ModuleException(__CLASS__, $exception->getMessage());
         }
     }
 
@@ -260,10 +261,12 @@ class MongoDb extends Module implements RequiresPackage
             if ($this->config['dump_type'] === self::DUMP_TYPE_JS) {
                 $this->driver->load($this->dumpFile);
             }
+
             if ($this->config['dump_type'] === self::DUMP_TYPE_MONGODUMP) {
                 $this->driver->setQuiet($this->config['quiet']);
                 $this->driver->loadFromMongoDump($this->dumpFile);
             }
+
             if ($this->config['dump_type'] === self::DUMP_TYPE_MONGODUMP_TAR_GZ) {
                 $this->driver->setQuiet($this->config['quiet']);
                 $this->driver->loadFromTarGzMongoDump($this->dumpFile);
@@ -284,8 +287,6 @@ class MongoDb extends Module implements RequiresPackage
      * <?php
      * $I->useDatabase('db_1');
      * ```
-     *
-     * @param string $dbName
      */
     public function useDatabase(string $dbName): void
     {
@@ -300,10 +301,6 @@ class MongoDb extends Module implements RequiresPackage
      * $I->haveInCollection('users', ['name' => 'John', 'email' => 'john@coltrane.com']);
      * $user_id = $I->haveInCollection('users', ['email' => 'john@coltrane.com']);
      * ```
-     *
-     * @param string $collection
-     * @param array $data
-     * @return string
      */
     public function haveInCollection(string $collection, array $data): string
     {
@@ -320,8 +317,6 @@ class MongoDb extends Module implements RequiresPackage
      * <?php
      * $I->seeInCollection('users', ['name' => 'miles']);
      * ```
-     *
-     * @param string $collection
      */
     public function seeInCollection(string $collection, array $criteria = []): void
     {
@@ -337,8 +332,6 @@ class MongoDb extends Module implements RequiresPackage
      * <?php
      * $I->dontSeeInCollection('users', ['name' => 'miles']);
      * ```
-     *
-     * @param string $collection
      */
     public function dontSeeInCollection(string $collection, array $criteria = []): void
     {
@@ -355,7 +348,6 @@ class MongoDb extends Module implements RequiresPackage
      * $user = $I->grabFromCollection('users', ['name' => 'miles']);
      * ```
      *
-     * @param string $collection
      * @return \MongoDB\Model\BSONDocument|mixed
      */
     public function grabFromCollection(string $collection, array $criteria = [])
@@ -373,8 +365,6 @@ class MongoDb extends Module implements RequiresPackage
      * // or
      * $count = $I->grabCollectionCount('users', ['isAdmin' => true]);
      * ```
-     *
-     * @param string $collection
      */
     public function grabCollectionCount(string $collection, array $criteria = []): int
     {
@@ -408,6 +398,7 @@ class MongoDb extends Module implements RequiresPackage
                 'Error: you should test against a single element criteria when asserting that elementIsArray'
             );
         }
+
         \PHPUnit\Framework\Assert::assertEquals(1, $res, 'Specified element is not a Mongo Object');
     }
 
@@ -437,6 +428,7 @@ class MongoDb extends Module implements RequiresPackage
                 'Error: you should test against a single element criteria when asserting that elementIsObject'
             );
         }
+
         \PHPUnit\Framework\Assert::assertEquals(1, $res, 'Specified element is not a Mongo Object');
     }
 
@@ -448,8 +440,6 @@ class MongoDb extends Module implements RequiresPackage
      * $I->seeNumElementsInCollection('users', 2);
      * $I->seeNumElementsInCollection('users', 1, ['name' => 'miles']);
      * ```
-     *
-     * @param string $collection
      */
     public function seeNumElementsInCollection(string $collection, int $expected, array $criteria = []): void
     {

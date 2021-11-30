@@ -14,26 +14,18 @@ class MongoDb
     /**
      * @var int
      */
-    const DEFAULT_PORT = 27017;
-    /**
-     * @var \Codeception\Lib\Driver\MongoDB|null
-     */
-    private $dbh;
-    /**
-     * @var string|null
-     */
-    private $dbName;
-    private $host;
-    private $user;
-    private $password;
-    /**
-     * @var \MongoDB\Client|null
-     */
-    private $client;
-    /**
-     * @var string
-     */
-    private $quiet = '';
+    public const DEFAULT_PORT = 27017;
+
+    private ?Database $dbh;
+
+    private ?string $dbName = null;
+    private string $host;
+    private string $user;
+    private string $password;
+
+    private ?\MongoDB\Client $client = null;
+
+    private string $quiet = '';
 
     /**
      * Connect to the Mongo server using the MongoDB extension.
@@ -117,8 +109,6 @@ class MongoDb
     /**
      * dump file has to be a javascript document where one can use all the mongo shell's commands
      * just FYI: this file can be easily created be RockMongo's export button
-     *
-     * @param string $dumpFile
      */
     public function load(string $dumpFile): void
     {
