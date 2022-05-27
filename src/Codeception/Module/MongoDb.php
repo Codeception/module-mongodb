@@ -12,6 +12,8 @@ use Codeception\Lib\Driver\MongoDb as MongoDbDriver;
 use Codeception\TestInterface;
 use Exception;
 use MongoConnectionException;
+use PHPUnit\Framework\Assert;
+use PHPUnit\Framework\ExpectationFailedException;
 
 /**
  * Works with MongoDb database.
@@ -73,20 +75,11 @@ class MongoDb extends Module
      */
     public const DUMP_TYPE_MONGODUMP_TAR_GZ = 'mongodump-tar-gz';
 
-    /**
-     * @api
-     * @var
-     */
-    public $dbh;
-
-    protected ?string $dumpFile = null;
+    protected string $dumpFile;
 
     protected bool $isDumpFileEmpty = true;
 
-    /**
-     * @var mixed|null
-     */
-    protected $dbHash;
+    protected ?string $dbHash;
 
     /**
      * @var array<string, mixed>
@@ -111,7 +104,7 @@ class MongoDb extends Module
      */
     protected array $requiredFields = ['dsn'];
 
-    public function _initialize()
+    public function _initialize(): void
     {
         try {
             $this->driver = MongoDbDriver::create(
@@ -207,7 +200,7 @@ class MongoDb extends Module
         }
     }
 
-    public function _before(TestInterface $test)
+    public function _before(TestInterface $test): void
     {
         if ($this->shouldCleanup()) {
             $this->cleanup();
@@ -215,7 +208,7 @@ class MongoDb extends Module
         }
     }
 
-    public function _after(TestInterface $test)
+    public function _after(TestInterface $test): void
     {
         $this->populated = false;
     }
@@ -300,6 +293,8 @@ class MongoDb extends Module
      * $I->haveInCollection('users', ['name' => 'John', 'email' => 'john@coltrane.com']);
      * $user_id = $I->haveInCollection('users', ['email' => 'john@coltrane.com']);
      * ```
+     *
+     * @param array<string, mixed> $data
      */
     public function haveInCollection(string $collection, array $data): string
     {
@@ -316,12 +311,14 @@ class MongoDb extends Module
      * <?php
      * $I->seeInCollection('users', ['name' => 'miles']);
      * ```
+     *
+     * @param array<string, mixed> $criteria
      */
     public function seeInCollection(string $collection, array $criteria = []): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         $res = $collection->count($criteria);
-        \PHPUnit\Framework\Assert::assertGreaterThan(0, $res);
+        Assert::assertGreaterThan(0, $res);
     }
 
     /**
@@ -331,12 +328,14 @@ class MongoDb extends Module
      * <?php
      * $I->dontSeeInCollection('users', ['name' => 'miles']);
      * ```
+     *
+     * @param array<string, mixed> $criteria
      */
     public function dontSeeInCollection(string $collection, array $criteria = []): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         $res = $collection->count($criteria);
-        \PHPUnit\Framework\Assert::assertLessThan(1, $res);
+        Assert::assertLessThan(1, $res);
     }
 
     /**
@@ -347,9 +346,9 @@ class MongoDb extends Module
      * $user = $I->grabFromCollection('users', ['name' => 'miles']);
      * ```
      *
-     * @return \MongoDB\Model\BSONDocument|mixed
+     * @param array<string, mixed> $criteria
      */
-    public function grabFromCollection(string $collection, array $criteria = [])
+    public function grabFromCollection(string $collection, array $criteria = []): array|object|null
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         return $collection->findOne($criteria);
@@ -364,6 +363,8 @@ class MongoDb extends Module
      * // or
      * $count = $I->grabCollectionCount('users', ['isAdmin' => true]);
      * ```
+     *
+     * @param array<string, mixed> $criteria
      */
     public function grabCollectionCount(string $collection, array $criteria = []): int
     {
@@ -378,8 +379,10 @@ class MongoDb extends Module
      * <?php
      * $I->seeElementIsArray('users', ['name' => 'John Doe'], 'data.skills');
      * ```
+     *
+     * @param array<string, mixed> $criteria
      */
-    public function seeElementIsArray(string $collection, array $criteria = [], string $elementToCheck = null): void
+    public function seeElementIsArray(string $collection, array $criteria, string $elementToCheck): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
 
@@ -393,11 +396,11 @@ class MongoDb extends Module
             )
         );
         if ($res > 1) {
-            throw new \PHPUnit\Framework\ExpectationFailedException(
+            throw new ExpectationFailedException(
                 'Error: you should test against a single element criteria when asserting that elementIsArray'
             );
         }
-        \PHPUnit\Framework\Assert::assertSame(1, $res, 'Specified element is not a Mongo Object');
+        Assert::assertSame(1, $res, 'Specified element is not a Mongo Object');
     }
 
     /**
@@ -407,8 +410,10 @@ class MongoDb extends Module
      * <?php
      * $I->seeElementIsObject('users', ['name' => 'John Doe'], 'data');
      * ```
+     *
+     * @param array<string, mixed> $criteria
      */
-    public function seeElementIsObject(string $collection, array $criteria = [], string $elementToCheck = null): void
+    public function seeElementIsObject(string $collection, array $criteria, string $elementToCheck): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
 
@@ -422,11 +427,11 @@ class MongoDb extends Module
             )
         );
         if ($res > 1) {
-            throw new \PHPUnit\Framework\ExpectationFailedException(
+            throw new ExpectationFailedException(
                 'Error: you should test against a single element criteria when asserting that elementIsObject'
             );
         }
-        \PHPUnit\Framework\Assert::assertSame(1, $res, 'Specified element is not a Mongo Object');
+        Assert::assertSame(1, $res, 'Specified element is not a Mongo Object');
     }
 
     /**
@@ -437,11 +442,13 @@ class MongoDb extends Module
      * $I->seeNumElementsInCollection('users', 2);
      * $I->seeNumElementsInCollection('users', 1, ['name' => 'miles']);
      * ```
+     *
+     * @param array<string, mixed> $criteria
      */
     public function seeNumElementsInCollection(string $collection, int $expected, array $criteria = []): void
     {
         $collection = $this->driver->getDbh()->selectCollection($collection);
         $res = $collection->count($criteria);
-        \PHPUnit\Framework\Assert::assertSame($expected, $res);
+        Assert::assertSame($expected, $res);
     }
 }
