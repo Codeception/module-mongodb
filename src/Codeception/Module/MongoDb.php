@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Codeception\Module;
 
-use Codeception\Lib\Interfaces\RequiresPackage;
 use Codeception\Module;
 use Codeception\Configuration;
 use Codeception\Exception\ModuleConfigException;
@@ -90,9 +89,9 @@ class MongoDb extends Module
     protected $dbHash;
 
     /**
-     * @var array
+     * @var array<string, mixed>
      */
-    protected $config = [
+    protected array $config = [
         'populate'  => true,
         'cleanup'   => true,
         'dsn'       => '',
@@ -110,7 +109,7 @@ class MongoDb extends Module
     /**
      * @var string[]
      */
-    protected $requiredFields = ['dsn'];
+    protected array $requiredFields = ['dsn'];
 
     public function _initialize()
     {
@@ -444,15 +443,5 @@ class MongoDb extends Module
         $collection = $this->driver->getDbh()->selectCollection($collection);
         $res = $collection->count($criteria);
         \PHPUnit\Framework\Assert::assertSame($expected, $res);
-    }
-
-    /**
-     * Returns list of classes and corresponding packages required for this module
-     *
-     * @return array<string, string>
-     */
-    public function _requires()
-    {
-        return ['MongoDB\Client' => '"mongodb/mongodb": "^1.0"'];
     }
 }
