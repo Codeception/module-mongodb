@@ -12,8 +12,9 @@
 	],
 	"minimum-stability": "RC",
 	"require": {
-		"php": "^7.4 || ^8.0",
-		"codeception/codeception": "^4.0"
+		"php": "^8.0",
+		"codeception/codeception": "^5.0",
+		"mongodb/mongodb": "^1.12"
 	},
 	"autoload": {
 		"classmap": [
@@ -22,5 +23,8 @@
 	},
 	"config": {
 		"classmap-authoritative": true
+	},
+	"require-dev": {
+		"codeception/stub": "^4.0"
 	}
 }

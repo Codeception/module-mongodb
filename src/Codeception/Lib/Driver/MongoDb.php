@@ -7,7 +7,9 @@ namespace Codeception\Lib\Driver;
 use Codeception\Exception\ModuleConfigException;
 use Codeception\Exception\ModuleException;
 use Exception;
+use MongoDB\Client;
 use MongoDB\Database;
+use MongoDB\Driver\Exception\Exception as MongoDbDriverException;
 
 class MongoDb
 {
@@ -16,15 +18,12 @@ class MongoDb
      */
     public const DEFAULT_PORT = 27017;
 
-    private ?Database $dbh;
-
-    private ?string $dbName = null;
+    private ?Client $client;
+    private Database $dbh;
+    private ?string $dbName;
     private string $host;
     private string $user;
     private string $password;
-
-    private ?\MongoDB\Client $client = null;
-
     private string $quiet = '';
 
     /**
@@ -33,10 +32,10 @@ class MongoDb
     protected function setupMongoDB(string $dsn, array $options): void
     {
         try {
-            $this->client = new \MongoDB\Client($dsn, $options);
+            $this->client = new Client($dsn, $options);
             $this->dbh    = $this->client->selectDatabase($this->dbName);
-        } catch (\MongoDB\Driver\Exception $exception) {
-            throw new ModuleException($this, sprintf('Failed to open Mongo connection: %s', $exception->getMessage()));
+        } catch (MongoDbDriverException $e) {
+            throw new ModuleException($this, sprintf('Failed to open Mongo connection: %s', $e->getMessage()));
         }
     }
 
@@ -47,7 +46,7 @@ class MongoDb
     {
         try {
             $this->dbh->drop();
-        } catch (\MongoDB\Driver\Exception $e) {
+        } catch (MongoDbDriverException $e) {
             throw new Exception(sprintf('Failed to drop the DB: %s', $e->getMessage()), $e->getCode(), $e);
         }
     }
@@ -70,7 +69,7 @@ class MongoDb
         }
 
         /* defining host */
-        if (strpos($dsn, 'mongodb://') !== false) {
+        if (str_starts_with($dsn, 'mongodb://')) {
             $this->host = str_replace('mongodb://', '', preg_replace('#\?.*#', '', $dsn));
         } else {
             $this->host = $dsn;
@@ -177,10 +176,7 @@ class MongoDb
         return '';
     }
 
-    /**
-     * @return \Codeception\Lib\Driver\MongoDb|\MongoDB\Database|null
-     */
-    public function getDbh()
+    public function getDbh(): Database
     {
         return $this->dbh;
     }
@@ -190,7 +186,7 @@ class MongoDb
         $this->dbh = $this->client->selectDatabase($dbName);
     }
 
-    public function getDbHash()
+    public function getDbHash(): ?string
     {
         $result = $this->dbh->command(['dbHash' => 1]);
 
@@ -202,7 +198,7 @@ class MongoDb
     }
 
     /**
-     * @return string[]|int[]
+     * @return array<string|int>
      */
     private function getHostPort(): array
     {
