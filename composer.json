@@ -14,7 +14,7 @@
 	"require": {
 		"php": "^8.0",
 		"codeception/codeception": "^5.0",
-		"mongodb/mongodb": "^1.12"
+		"mongodb/mongodb": "^1.12 || ^2.0"
 	},
 	"autoload": {
 		"classmap": [

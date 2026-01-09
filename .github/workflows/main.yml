@@ -13,13 +13,14 @@ jobs:
 
     strategy:
       matrix:
-        php: [8.0, 8.1]
+        php: [8.0, 8.1, 8.2, 8.3, 8.4, 8.5]
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v6
 
-    - name: Setup PHP
+    - name: Setup PHP != 8.5
+      if: ${{ matrix.php != '8.5' }}
       uses: shivammathur/setup-php@v2
       with:
         php-version: ${{ matrix.php }}
@@ -28,6 +29,30 @@ jobs:
         coverage: none
       env:
         fail-fast: true
+
+    - name: Setup PHP 8.5
+      if: ${{ matrix.php == '8.5' }}
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php }}
+        extensions: mbstring, xml, dom, mongodb
+        tools: pecl
+        coverage: none
+        # this ini directive seems to be off by default in PHP 8.5
+        # see https://github.com/php/php-src/issues/20279
+        # enable it because codeception relies on it.
+        ini-values: register_argc_argv=1
+      env:
+        fail-fast: true
+
+    - name: Install mongodb-database-tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget gnupg
+        wget -qO - https://www.mongodb.org/static/pgp/server-8.0.asc | sudo gpg --dearmor -o /usr/share/keyrings/mongodb-server-8.0.gpg
+        echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/8.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-8.0.list
+        sudo apt-get update
+        sudo apt-get install -y mongodb-database-tools mongodb-mongosh
 
     - name: Validate composer.json and composer.lock
       run: composer validate

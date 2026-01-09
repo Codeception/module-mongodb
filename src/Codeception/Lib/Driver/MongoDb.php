@@ -111,13 +111,43 @@ class MongoDb
      */
     public function load(string $dumpFile): void
     {
+        $shell = $this->findMongoShellBinary();
+        $uri = $this->host . '/' . $this->dbName;
+
         $cmd = sprintf(
-            'mongo %s %s%s',
-            $this->host . '/' . $this->dbName,
+            '%s %s %s%s',
+            $shell,
+            $uri,
             $this->createUserPasswordCmdString(),
             escapeshellarg($dumpFile)
         );
         shell_exec($cmd);
+    }
+
+    private function findMongoShellBinary(): string
+    {
+        if ($this->commandExists('mongo')) {
+            return 'mongo';
+        }
+
+        if ($this->commandExists('mongosh')) {
+            return 'mongosh';
+        }
+
+        throw new ModuleException($this, 'Neither mongosh nor mongo found in PATH.');
+    }
+
+    private function commandExists(string $cmd): bool
+    {
+        $null = PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null';
+
+        exec(
+            sprintf('%s --version > %s 2>&1', escapeshellcmd($cmd), $null),
+            $_,
+            $code
+        );
+
+        return $code === 0;
     }
 
     public function loadFromMongoDump(string $dumpFile): void

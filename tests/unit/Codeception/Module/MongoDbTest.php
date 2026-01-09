@@ -41,25 +41,25 @@ final class MongoDbTest extends Unit
             $this->markTestSkipped('MongoDB is not installed');
         }
 
-        $cleanupDirty = in_array('cleanup-dirty', $this->getGroups());
-        $config = $this->mongoConfig + ['cleanup' => $cleanupDirty ? 'dirty' : true];
-
         $client = new \MongoDB\Client();
 
-        $container = Stub::make(ModuleContainer::class);
-        $this->module = new MongoDb($container);
-        $this->module->_setConfig($config);
-        try {
-            $this->module->_initialize();
-        } catch (ModuleException $moduleException) {
-            $this->markTestSkipped($moduleException->getMessage());
-        }
+        $this->initMongoModule(true);
 
         $this->db = $client->selectDatabase('test');
         $this->userCollection = $this->db->users;
 
-        if (!$cleanupDirty) {
-            $this->userCollection->insertOne(['id' => 1, 'email' => 'miles@davis.com']);
+        $this->userCollection->insertOne(['id' => 1, 'email' => 'miles@davis.com']);
+    }
+
+    private function initMongoModule($cleanup): void
+    {
+        $container = Stub::make(ModuleContainer::class);
+        $this->module = new MongoDb($container);
+        $this->module->_setConfig($this->mongoConfig + ['cleanup' => $cleanup]);
+        try {
+            $this->module->_initialize();
+        } catch (ModuleException $moduleException) {
+            $this->markTestSkipped($moduleException->getMessage());
         }
     }
 
@@ -181,11 +181,10 @@ final class MongoDbTest extends Unit
         }
     }
 
-    /**
-     * @group cleanup-dirty
-     */
     public function testCleanupDirty()
     {
+        $this->initMongoModule('dirty');
+
         $test = $this->createMock(\Codeception\TestInterface::class);
         $collection = $this->db->selectCollection('96_bulls');
 
